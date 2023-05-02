@@ -12,7 +12,7 @@ pub fn read(ty: &Type, ele_name: TokenStream) -> TokenStream {
     quote! {
         hard_xml::log_start_reading!(#ele_name);
 
-        let res = <#ty as XmlRead>::from_reader(reader)?;
+        let res = <#ty as hard_xml::XmlRead>::from_reader(reader)?;
 
         hard_xml::log_finish_reading!(#ele_name);
 
