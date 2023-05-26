@@ -1,14 +1,6 @@
 //! Strong typed xml, based on xmlparser.
 //!
-//! [![Build Status](https://github.com/PoiScript/hard-xml/workflows/Test/badge.svg)](https://github.com/PoiScript/hard-xml/actions?query=workflow%3ATest)
-//! [![Crates.io](https://img.shields.io/crates/v/hard-xml.svg)](https://crates.io/crates/hard-xml)
-//! [![Document](https://docs.rs/hard-xml/badge.svg)](https://docs.rs/hard-xml)
-//!
 //! ## Quick Start
-//!
-//! ```toml
-//! hard-xml = "0.6"
-//! ```
 //!
 //! ```rust
 //! use std::borrow::Cow;
@@ -44,6 +36,55 @@
 //! ```
 //!
 //! ## Attributes
+//!
+//! ### `#[xml(strict(...))]`
+//!
+//! Opt-in to stricter input handling.
+//!
+//! ```rust
+//! #[derive(hard_xml::XmlWrite, hard_xml::XmlRead, PartialEq, Debug)]
+//! #[xml(tag = "ex")]
+//! #[xml(strict(unknown_attribute, unknown_element))]
+//! struct Ex {
+//!     // ...
+//! }
+//! ```
+//!
+//! #### Strict Options
+//!
+//! ##### `strict(unknown_attribute)`
+//!
+//! Fail to parse if an unknown attribute is encountered.
+//!
+//! ```rust
+//! # use hard_xml::XmlRead;
+//! #[derive(Debug, hard_xml::XmlRead)]
+//! #[xml(tag = "ex")]
+//! #[xml(strict(unknown_attribute))]
+//! struct Ex {
+//! }
+//!
+//! assert_eq!(
+//!     Ex::from_str("<ex foo='bar'/>").unwrap_err().to_string(),
+//!     r#"unknown field "foo" in element "Ex""#);
+//! ```
+//!
+//! ##### `strict(unknown_element)`
+//!
+//!  Fail to parse if an unknown child element is encountered.
+//!
+//! ```rust
+//! # use hard_xml::XmlRead;
+//! #[derive(Debug, hard_xml::XmlRead)]
+//! #[xml(tag = "ex")]
+//! #[xml(strict(unknown_element))]
+//! struct Ex {
+//! }
+//!
+//! assert_eq!(
+//!     Ex::from_str("<ex><unknown/></ex>").unwrap_err().to_string(),
+//!     r#"unknown field "unknown" in element "Ex""#);
+//! ```
 //!
 //! ### `#[xml(tag = "")]`
 //!
@@ -292,10 +333,6 @@
 //!     Root { attr: true }
 //! );
 //! ```
-//!
-//! ## License
-//!
-//! MIT
 
 #[cfg(feature = "log")]
 mod log;
