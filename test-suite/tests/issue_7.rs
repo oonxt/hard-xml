@@ -1,5 +1,5 @@
 use chrono::offset::TimeZone;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
 use hard_xml::{XmlRead, XmlResult, XmlWrite};
 
 #[derive(Debug, PartialEq, XmlRead, XmlWrite)]
@@ -10,7 +10,7 @@ struct Document {
 }
 
 #[test]
-fn test() -> XmlResult<()> {
+fn datetime_roundtrip() -> XmlResult<()> {
     let _ = env_logger::builder()
         .is_test(true)
         .format_timestamp(None)
@@ -19,15 +19,17 @@ fn test() -> XmlResult<()> {
     assert_eq!(
         Document::from_str(r#"<document datetime="1970-01-01T00:00:00.0Z" />"#)?,
         Document {
-            datetime: Utc.timestamp(0, 0)
+            datetime: Utc.timestamp_opt(0, 0).unwrap()
         }
     );
 
+    let datetime = NaiveDate::from_ymd_opt(2018, 1, 26).unwrap();
+    let datetime = datetime
+        .and_hms_micro_opt(18, 30, 9, 453_829)
+        .unwrap()
+        .and_utc();
     assert_eq!(
-        (Document {
-            datetime: Utc.ymd(2018, 1, 26).and_hms_micro(18, 30, 9, 453_829)
-        })
-        .to_string()?,
+        (Document { datetime }).to_string()?,
         r#"<document datetime="2018-01-26 18:30:09.453829 UTC"/>"#
     );
 

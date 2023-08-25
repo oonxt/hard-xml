@@ -6,6 +6,6 @@ include:
 
 test-ui:
   extends: rust-ci:test
-  image: rust:1.65.0-slim
+  image: rust:1.72.0-slim
   variables:
     RUSTFLAGS: --cfg uitest
