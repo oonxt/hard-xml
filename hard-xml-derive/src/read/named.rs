@@ -305,7 +305,10 @@ fn read_flatten_text(
 fn from_str(ty: &Type, with: &Option<ExprPath>) -> TokenStream {
     if let Some(with_mod) = with {
         return quote! {
-            #with_mod::from_str(&__value).map_err(|e| XmlError::FromStr(e.into()))?
+            {
+                let r: Result<U, XmlError> = #with_mod::to_xml(&__value);
+                r?
+            }
         };
     }
 
