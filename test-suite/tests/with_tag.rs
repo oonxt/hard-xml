@@ -3,7 +3,6 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 mod withmod {
-    use std::borrow::Cow;
     use std::error::Error;
     use std::fmt::Display;
     use std::str::FromStr;
@@ -17,9 +16,9 @@ mod withmod {
             .map_err(|err| hard_xml::XmlError::FromStr(Box::new(err)))?)
     }
 
-    pub fn to_xml(xmlval: &impl Display) -> Cow<str> {
+    pub fn to_xml(xmlval: &impl Display) -> hard_xml::XmlResult<String> {
         // reverse the string to show that it is not the default behaviour
-        xmlval.to_string().chars().rev().collect::<String>().into()
+        Ok(xmlval.to_string().chars().rev().collect())
     }
 }
 

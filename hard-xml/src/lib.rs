@@ -170,7 +170,7 @@
 //! ```ignore
 //! mod some_module_name {
 //!     fn from_xml(mode: &str) -> hard_xml::XmlResult<T>;
-//!     fn to_xml(mode: &T) -> std::borrow::Cow<str>;
+//!     fn to_xml(mode: &T) -> hard_xml::XmlResult<impl std::convert::AsRef<str>>;
 //! }
 //! ```
 //!
@@ -189,10 +189,10 @@
 //!         }
 //!     }
 //!
-//!     pub fn to_xml(mode: &bool) -> std::borrow::Cow<str> {
+//!     pub fn to_xml(mode: &bool) -> hard_xml::XmlResult<&'static str> {
 //!         match mode {
-//!             false => "agile".into(),
-//!             true => "fast".into(),
+//!             false => Ok("agile"),
+//!             true => Ok("fast"),
 //!         }
 //!     }
 //! }
