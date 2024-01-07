@@ -123,54 +123,6 @@ assert_eq!(
 );
 ```
 
-#### `#[xml(attr = "" with = "")]`
-
-Specifies that a struct field is attribute bound to a specific module.
-
-```rust
-use hard_xml::{XmlRead, XmlWrite};
-use std::error::Error;
-use std::fmt::Display;
-use std::str::FromStr;
-
-mod withmod {
-    use std::error::Error;
-    use std::fmt::Display;
-    use std::str::FromStr;
-    use std::borrow::Cow;
-    use hard_xml::{XmlError, XmlResult};
-
-    #[inline]
-    pub fn to_xml<T>(s: &str) -> XmlResult<T>
-    where
-        T: FromStr,
-        <T as FromStr>::Err: Error + Send + Sync + 'static,
-    {
-        Ok(T::from_str(s).map_err(|err| XmlError::FromStr(Box::new(err)))?)
-    }
-
-    #[inline]
-    pub fn from_xml<'a, U>(xmlval: &'a &'a U) -> Cow<'a, str>
-    where
-        U: Display + FromStr,
-        <U as FromStr>::Err: Error + Send + Sync,
-    {
-        xmlval.to_string().into()
-    }
-}
-
-#[derive(XmlRead, XmlWrite, PartialEq, Debug)]
-#[xml(tag = "withtag")]
-struct Withtag<U>
-where
-    U: Display + FromStr,
-    <U as FromStr>::Err: 'static + Error + Send + Sync,
-{
-    #[xml(attr = "att1", with = "withmod")]
-    att1: U,
-}
-```
-
 #### `#[xml(child = "")]`
 
 Specifies that a struct field is a child element. Support

@@ -223,7 +223,7 @@ fn write_flatten_text(
 fn to_str(ty: &Type, with: &Option<ExprPath>) -> TokenStream {
     if let Some(with_mod) = with {
         return quote! {
-            &#with_mod::from_xml(&__value)
+            &#with_mod::to_xml(&__value)
         };
     }
 

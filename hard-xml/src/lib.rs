@@ -165,50 +165,59 @@
 //!
 //! ### `#[xml(attr = "" with = "")]`
 //!
-//! Specifies that a struct field is attribute bound to a specific module.
+//! Parse and serialize the field with the module specified as an argument. That module must provide the following interface given that the fields is of type `T`.
+//!
+//! ```ignore
+//! mod some_module_name {
+//!     fn from_xml(mode: &str) -> hard_xml::XmlResult<T>;
+//!     fn to_xml(mode: &T) -> std::borrow::Cow<str>;
+//! }
+//! ```
+//!
+//! #### Example
 //!
 //! ```rust
-//! use hard_xml::{XmlRead, XmlWrite};
-//! use std::error::Error;
-//! use std::fmt::Display;
-//! use std::str::FromStr;
-//!
-//! mod withmod {
-//!     use std::error::Error;
-//!     use std::fmt::Display;
-//!     use std::str::FromStr;
-//!     use std::borrow::Cow;
-//!     use hard_xml::{XmlError, XmlResult};
-//!
-//!     #[inline]
-//!     pub fn to_xml<T>(s: &str) -> XmlResult<T>
-//!     where
-//!         T: FromStr,
-//!         <T as FromStr>::Err: Error + Send + Sync + 'static,
-//!     {
-//!         Ok(T::from_str(s).map_err(|err| XmlError::FromStr(Box::new(err)))?)
+//! # use hard_xml::{XmlRead, XmlWrite};
+//! #
+//! mod parse_drive_mode {
+//!     pub fn from_xml(mode: &str) -> hard_xml::XmlResult<bool> {
+//!         match mode {
+//!             "agile" => Ok(false),
+//!             "fast" => Ok(true),
+//!             _ => Err(hard_xml::XmlError::FromStr(
+//!                 format!("Expected mode to be agile or fast, got {mode:?}").into())),
+//!         }
 //!     }
 //!
-//!     #[inline]
-//!     pub fn from_xml<'a, U>(xmlval: &'a &'a U) -> Cow<'a, str>
-//!     where
-//!         U: Display + FromStr,
-//!         <U as FromStr>::Err: Error + Send + Sync,
-//!     {
-//!         xmlval.to_string().into()
+//!     pub fn to_xml(mode: &bool) -> std::borrow::Cow<str> {
+//!         match mode {
+//!             false => "agile".into(),
+//!             true => "fast".into(),
+//!         }
 //!     }
 //! }
 //!
 //! #[derive(XmlRead, XmlWrite, PartialEq, Debug)]
-//! #[xml(tag = "withtag")]
-//! struct Withtag<U>
-//! where
-//!     U: Display + FromStr,
-//!     <U as FromStr>::Err: 'static + Error + Send + Sync,
-//! {
-//!     #[xml(attr = "att1", with = "withmod")]
-//!     att1: U,
+//! #[xml(tag = "spaceship")]
+//! struct Spaceship {
+//!     #[xml(attr = "drive_mode", with = "parse_drive_mode")]
+//!     drive_mode: bool,
 //! }
+//!
+//! assert_eq!(
+//!     Spaceship::from_str(r#"<spaceship drive_mode="agile"/>"#).unwrap(),
+//!     Spaceship {
+//!         drive_mode: false,
+//!     }
+//! );
+//!
+//! // match with a reversed string in from_xml of withmod.
+//! assert_eq!(
+//!     Spaceship {
+//!         drive_mode: true,
+//!     }.to_string().unwrap(),
+//!     r#"<spaceship drive_mode="fast"/>"#,
+//! );
 //! ```
 //!
 //! ### `#[xml(child = "")]`

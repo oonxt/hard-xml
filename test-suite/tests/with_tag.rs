@@ -3,35 +3,27 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 mod withmod {
-    use hard_xml::{XmlError, XmlResult};
     use std::borrow::Cow;
     use std::error::Error;
     use std::fmt::Display;
     use std::str::FromStr;
 
-    #[inline]
-    pub fn to_xml<T>(s: &str) -> XmlResult<T>
+    pub fn from_xml<T>(s: &str) -> hard_xml::XmlResult<T>
     where
         T: FromStr,
         <T as FromStr>::Err: Error + Send + Sync + 'static,
     {
-        Ok(T::from_str(s).map_err(|err| XmlError::FromStr(Box::new(err)))?)
+        Ok(T::from_str(&s.chars().rev().collect::<String>())
+            .map_err(|err| hard_xml::XmlError::FromStr(Box::new(err)))?)
     }
 
-    #[inline]
-    pub fn from_xml<'a, U>(xmlval: &'a &'a U) -> Cow<'a, str>
-    where
-        U: Display + FromStr,
-        <U as FromStr>::Err: Error + Send + Sync,
-    {
+    pub fn to_xml(xmlval: &impl Display) -> Cow<str> {
         // reverse the string to show that it is not the default behaviour
         xmlval.to_string().chars().rev().collect::<String>().into()
     }
 }
 
-use hard_xml::{XmlRead, XmlResult, XmlWrite};
-
-#[derive(XmlRead, XmlWrite, PartialEq, Debug)]
+#[derive(hard_xml::XmlRead, hard_xml::XmlWrite, PartialEq, Debug)]
 #[xml(tag = "withtag")]
 struct Withtag<U>
 where
@@ -45,25 +37,24 @@ where
 }
 
 #[test]
-fn test() -> XmlResult<()> {
+fn test() -> hard_xml::XmlResult<()> {
     let _ = env_logger::builder()
         .is_test(true)
         .format_timestamp(None)
         .try_init();
 
     assert_eq!(
-        Withtag::from_str(r#"<withtag att1="att1"/>"#)?,
+        <Withtag<String> as hard_xml::XmlRead>::from_str(r#"<withtag att1="att1"/>"#)?,
         Withtag {
-            att1: String::from("att1"),
+            att1: String::from("1tta"),
         }
     );
 
     // match with a reversed string in from_xml of withmod.
     assert_eq!(
-        (Withtag {
+        hard_xml::XmlWrite::to_string(&Withtag {
             att1: String::from("att1"),
-        })
-        .to_string()?,
+        })?,
         r#"<withtag att1="1tta"/>"#,
     );
 

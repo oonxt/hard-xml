@@ -306,7 +306,7 @@ fn from_str(ty: &Type, with: &Option<ExprPath>) -> TokenStream {
     if let Some(with_mod) = with {
         return quote! {
             {
-                let r: Result<U, XmlError> = #with_mod::to_xml(&__value);
+                let r: Result<_, XmlError> = #with_mod::from_xml(&__value);
                 r?
             }
         };
