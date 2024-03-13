@@ -16,4 +16,4 @@ proc-macro = true
 bitflags = "2.0.0"
 proc-macro2 = "1.0"
 quote = "1.0"
-syn = "1.0"
+syn = "2.0"
