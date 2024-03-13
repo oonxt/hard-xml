@@ -506,6 +506,7 @@ impl Type {
 }
 
 bitflags! {
+    #[derive(Copy,Clone)]
     pub struct StrictMode: u8 {
         const UNKNOWN_ATTRIBUTE = 0b0000_0001;
         const UNKNOWN_ELEMENT = 0b0000_0010;
