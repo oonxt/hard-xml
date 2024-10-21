@@ -13,6 +13,7 @@ use crate::{XmlError, XmlResult};
 ///
 /// It behaves almost exactly like `xmlparser::Tokenizer::from("...").peekable()`
 /// but with some helper functions.
+#[derive(Debug, Clone)]
 pub struct XmlReader<'a> {
     tokenizer: Peekable<Tokenizer<'a>>,
 }
