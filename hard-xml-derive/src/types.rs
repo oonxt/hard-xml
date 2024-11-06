@@ -124,6 +124,20 @@ pub enum Field {
         tag: LitStr,
         is_cdata: bool,
     },
+    /// Arrtibute Field
+    ///
+    /// ```ignore
+    /// struct Foo {
+    ///     #[xml(prefix = "$tag")]
+    ///     $name: $ty,
+    /// }
+    /// ```
+    Prefix {
+        name: TokenStream,
+        bind: Ident,
+        ty: Type,
+        tag: LitStr,
+    },
 }
 
 pub enum Type {
@@ -145,6 +159,10 @@ pub enum Type {
     VecBool,
     // Option<bool>
     OptionBool,
+    // Map<String, String>
+    Map(syn::Type, syn::Type),
+    // Option<Map<String, String>>
+    OptionMap(syn::Type, syn::Type),
 }
 
 impl Element {
@@ -275,7 +293,7 @@ impl Field {
     }
 }
 
-enum FieldKind {
+pub(crate) enum FieldKind {
     Attribute(LitStr, bool),
     Child(Vec<LitStr>, bool),
     FlattenText {
@@ -284,6 +302,7 @@ enum FieldKind {
         default: bool,
     },
     Text(bool),
+    Prefix(LitStr),
 }
 
 impl FieldKind {
@@ -333,6 +352,12 @@ impl FieldKind {
                 with,
                 is_cdata: cdata,
             },
+            FieldKind::Prefix(tag) => Field::Prefix {
+                name,
+                bind,
+                ty,
+                tag,
+            },
         })
     }
 
@@ -342,20 +367,22 @@ impl FieldKind {
             child_tags,
             flatten_text_tag,
             is_text,
+            is_prefix,
             ..
         } = attrs;
 
-        match (attr_tag, child_tags.as_slice(), flatten_text_tag, is_text) {
-            (Some(tag), &[], None, false) => Some(Self::Attribute(tag, attrs.default)),
-            (None, &[_, ..], None, false) => Some(Self::Child(child_tags, attrs.default)),
-            (None, &[], Some(tag), false) => Some(Self::FlattenText {
+        match (attr_tag, child_tags.as_slice(), flatten_text_tag, is_text, is_prefix) {
+            (Some(tag), &[], None, false, false) => Some(Self::Attribute(tag, attrs.default)),
+            (None, &[_, ..], None, false, false) => Some(Self::Child(child_tags, attrs.default)),
+            (None, &[], Some(tag), false, false) => Some(Self::FlattenText {
                 tag,
                 cdata: attrs.is_cdata,
                 default: attrs.default,
             }),
-            (None, &[], None, true) => Some(Self::Text(attrs.is_cdata)),
+            (None, &[], None, true, false) => Some(Self::Text(attrs.is_cdata)),
+            (Some(tag), &[], None, false, true) => Some(Self::Prefix(tag)),
 
-            (None, &[], None, false) => {
+            (None, &[], None, false, false) => {
                 ctx.push_new_error(
                     span,
                     "field should have one of `attr`, `child`, `text` or `flatten_text` attribute",
@@ -409,6 +436,10 @@ impl Type {
         matches!(self, Type::VecCowStr | Type::VecT(_) | Type::VecBool)
     }
 
+    pub fn is_map(&self) -> bool {
+        matches!(self, Type::Map(_, _) | Type::OptionMap(_, _))
+    }
+
     fn parse(mut ty: syn::Type) -> Self {
         fn is_vec(ty: &syn::Type) -> Option<&syn::Type> {
             let path = match ty {
@@ -443,6 +474,26 @@ impl Type {
             if seg.ident == "Option" && args.len() == 1 {
                 match &args[0] {
                     GenericArgument::Type(arg) => Some(arg),
+                    _ => None,
+                }
+            } else {
+                None
+            }
+        }
+
+        fn is_map(ty: &syn::Type) -> Option<(&syn::Type, &syn::Type)> {
+            let path = match ty {
+                syn::Type::Path(ty) => &ty.path,
+                _ => return None,
+            };
+            let seg = path.segments.last()?;
+            let args = match &seg.arguments {
+                PathArguments::AngleBracketed(bracketed) => &bracketed.args,
+                _ => return None,
+            };
+            if seg.ident == "HashMap" && args.len() == 2 {
+                match (&args[0], &args[1]) {
+                    (GenericArgument::Type(arg1), GenericArgument::Type(arg2)) => Some((arg1, arg2)),
                     _ => None,
                 }
             } else {
@@ -492,6 +543,8 @@ impl Type {
                 Type::OptionCowStr
             } else if is_bool(ty) {
                 Type::OptionBool
+            } else if let Some((ty1, ty2)) = is_map(ty) {
+                Type::OptionMap(ty1.clone(), ty2.clone())
             } else {
                 Type::OptionT(ty.clone())
             }
@@ -499,6 +552,8 @@ impl Type {
             Type::CowStr
         } else if is_bool(&ty) {
             Type::Bool
+        } else if let Some((ty1, ty2)) = is_map(&ty) {
+            Type::Map(ty1.clone(), ty2.clone())
         } else {
             Type::T(ty)
         }

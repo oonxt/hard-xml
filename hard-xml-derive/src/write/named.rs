@@ -34,6 +34,11 @@ pub fn write(tag: &LitStr, ele_name: TokenStream, fields: &[Field]) -> TokenStre
         _ => None,
     });
 
+    let write_maps = fields.iter().filter_map(|field| match field {
+        Field::Prefix { tag, bind, ty, .. } => Some(write_prefix(tag, bind, ty, &ele_name)),
+        _ => None,
+    });
+
     let is_leaf_element = fields
         .iter()
         .all(|field| matches!(field, Field::Attribute { .. }));
@@ -83,6 +88,8 @@ pub fn write(tag: &LitStr, ele_name: TokenStream, fields: &[Field]) -> TokenStre
         writer.write_element_start(#tag)?;
 
         #( #write_attributes )*
+
+        #( #write_maps )*
 
         #write_element_end
 
@@ -220,6 +227,37 @@ fn write_flatten_text(
     }
 }
 
+
+fn write_prefix(tag: &LitStr, name: &Ident, ty: &Type, ele_name: &TokenStream) -> TokenStream {
+
+    if !ty.is_map() {
+        panic!("`prefix` attribute only support Map.");
+    } else if ty.is_option() {
+        quote! {
+            hard_xml::log_start_writing_field!(#ele_name, #name);
+
+            if let Some(__value) = #name {
+                for (k, v) in __value {
+                    writer.write_attribute(format!("{}:{}", #tag, k), &v.to_string())?;
+                }
+            }
+
+            hard_xml::log_finish_writing_field!(#ele_name, #name);
+        }
+    } else {
+        quote! {
+            hard_xml::log_start_writing_field!(#ele_name, #name);
+
+            let __value = #name;
+            for (k, v) in __value {
+                writer.write_attribute(&format!("{}:{}", #tag, k), &v.to_string())?;
+            }
+
+            hard_xml::log_finish_writing_field!(#ele_name, #name);
+        }
+    }
+}
+
 fn to_str(ty: &Type, with: &Option<ExprPath>) -> TokenStream {
     if let Some(with_mod) = with {
         return quote! {
@@ -242,6 +280,9 @@ fn to_str(ty: &Type, with: &Option<ExprPath>) -> TokenStream {
         },
         Type::T(_) | Type::OptionT(_) | Type::VecT(_) => {
             quote! { &format!("{}", __value) }
+        },
+        Type::Map(_, _) | Type::OptionMap(_, _) => {
+            quote! { &format!("{}", __value)}
         }
     }
 }

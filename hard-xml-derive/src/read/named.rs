@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Ident, LitStr, ExprPath};
+use syn::{ExprPath, Ident, LitStr};
 
 use crate::types::{Field, StrictMode, Type};
 
@@ -13,7 +13,7 @@ pub fn read(
     let init_fields = fields.iter().map(|field| match field {
         Field::Attribute { bind, ty, .. }
         | Field::Child { bind, ty, .. }
-        | Field::FlattenText { bind, ty, .. } => init_value(bind, ty),
+        | Field::FlattenText { bind, ty, .. } | Field::Prefix { bind, ty, .. } => init_value(bind, ty),
         Field::Text { bind, .. } => quote! { let #bind; },
     });
 
@@ -39,7 +39,13 @@ pub fn read(
             default,
             ..
         } => return_value(name, bind, ty, *default, &ele_name),
-        Field::Text { name, bind, ty, .. } => return_value(name, bind, ty, false, &ele_name),
+        Field::Text { name, bind, ty, .. }
+        | Field::Prefix {
+            name,
+            bind,
+            ty,
+            ..
+        } => return_value(name, bind, ty, false, &ele_name),
     });
 
     let read_attr_fields = fields.iter().filter_map(|field| match field {
@@ -79,6 +85,11 @@ pub fn read(
 
     let read_text_fields = fields.iter().filter_map(|field| match field {
         Field::Text { bind, ty, with, name, .. } => Some(read_text(tag, bind, name, ty, with, &ele_name)),
+        _ => None,
+    });
+
+    let read_prefix_fields = fields.iter().filter_map(|field| match field {
+        Field::Prefix { bind, ty, name, .. } => Some(read_prefix(tag, bind, name, ty, &ele_name)),
         _ => None,
     });
 
@@ -151,6 +162,8 @@ pub fn read(
             match __key {
                 #( #read_attr_fields, )*
                 key => {
+                    #( #read_prefix_fields )*
+
                     #unknown_attribute_handler
                 },
             }
@@ -163,7 +176,16 @@ pub fn read(
 fn init_value(name: &Ident, ty: &Type) -> TokenStream {
     if ty.is_vec() {
         quote! { let mut #name = Vec::new(); }
-    } else {
+    } else if ty.is_map() {
+        if let Type::Map(arg1, arg2) = ty {
+            quote! { let mut #name = std::collections::HashMap::<#arg1, #arg2>::new(); }
+        } else if let Type::OptionMap(arg1, arg2) = ty {
+            quote! { let mut #name = std::collections::HashMap::<#arg1, #arg2>::new(); }
+        } else {
+            quote! {}
+        }
+    }
+    else {
         quote! { let mut #name = None; }
     }
 }
@@ -177,6 +199,10 @@ fn return_value(
 ) -> TokenStream {
     if ty.is_vec() || ty.is_option() {
         quote! { #name: #bind }
+    } else if ty.is_map() {
+        quote! {
+            #name: #bind
+        }
     } else if default {
         quote! { #name: #bind.unwrap_or_default() }
     } else {
@@ -234,6 +260,44 @@ fn read_text(
             #bind = Some(#from_str);
 
             hard_xml::log_finish_reading_field!(#ele_name, #name);
+        }
+    }
+}
+
+
+
+fn read_prefix(
+    tag: &LitStr,
+    bind: &Ident,
+    name: &TokenStream,
+    ty: &Type,
+    ele_name: &TokenStream,
+) -> TokenStream {
+    let name_lit = format!("{}", name);
+    let len = name_lit.len() + 1;
+    if !ty.is_map() {
+        panic!("`prefix` attribute only support Map.");
+    } else {
+        if let Type::OptionMap(_, arg2) = ty {
+            quote! {
+                if key.starts_with(#name_lit) {
+                    #bind.insert(
+                        key[#len..].to_string(),
+                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                    );
+                }
+            }
+        } else if let Type::Map(_, arg2) = ty {
+            quote! {
+                if key.starts_with(#name_lit) {
+                    #bind.insert(
+                        key[#len..].to_string(),
+                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                    );
+                }
+            }
+        } else {
+            quote! {}
         }
     }
 }
@@ -323,6 +387,9 @@ fn from_str(ty: &Type, with: &Option<ExprPath>) -> TokenStream {
         },
         Type::T(ty) | Type::OptionT(ty) | Type::VecT(ty) => quote! {
             <#ty as std::str::FromStr>::from_str(&__value).map_err(|e| XmlError::FromStr(e.into()))?
+        },
+        Type::Map(_, _) | Type::OptionMap(_, _) => quote! {
+            __value
         },
     }
 }

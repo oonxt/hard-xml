@@ -1,4 +1,5 @@
-use crate::types::StrictMode;
+use proc_macro2::Span;
+use crate::types::{FieldKind, StrictMode};
 use crate::utils::Context;
 use syn::Attribute;
 use syn::Error;
@@ -63,6 +64,7 @@ pub(crate) struct Field {
     pub(crate) is_text: bool,
     pub(crate) flatten_text_tag: Option<LitStr>,
     pub(crate) is_cdata: bool,
+    pub(crate) is_prefix: bool,
     pub(crate) with: Option<ExprPath>,
 }
 
@@ -74,7 +76,9 @@ impl Field {
         let mut is_text = false;
         let mut flatten_text_tag = None;
         let mut is_cdata = false;
+        let mut is_prefix = false;
         let mut with = None;
+
 
         // TODO can this be handled more cleanly?
         for meta in attrs.iter().filter_map(get_xml_meta).flatten() {
@@ -112,6 +116,38 @@ impl Field {
                             ));
                         } else {
                             attr_tag = Some(lit);
+                        }
+                    } else {
+                        context.push(Error::new_spanned(m.lit, "expected a string literal"));
+                    }
+                }
+                NestedMeta::Meta(Meta::NameValue(m)) if m.path.is_ident("prefix") => {
+                    if let Lit::Str(lit) = m.lit {
+                        if attr_tag.is_some() {
+                            context.push(Error::new_spanned(m.path, "duplicate `prefix` attribute"));
+                        } else if is_text {
+                            context.push(Error::new_spanned(
+                                m.path,
+                                "`prefix` attribute and `text` attribute is disjoint",
+                            ));
+                        } else if is_cdata {
+                            context.push(Error::new_spanned(
+                                m.path,
+                                "`prefix` attribute and `cdata` attribute is disjoint",
+                            ))
+                        } else if !child_tags.is_empty() {
+                            context.push(Error::new_spanned(
+                                m.path,
+                                "`prefix` attribute and `child` attribute is disjoint",
+                            ));
+                        } else if flatten_text_tag.is_some() {
+                            context.push(Error::new_spanned(
+                                m.path,
+                                "`prefix` attribute and `flatten_text` attribute is disjoint",
+                            ));
+                        } else {
+                            attr_tag = Some(lit);
+                            is_prefix = true;
                         }
                     } else {
                         context.push(Error::new_spanned(m.lit, "expected a string literal"));
@@ -235,6 +271,7 @@ impl Field {
             is_text,
             flatten_text_tag,
             is_cdata,
+            is_prefix,
             with,
         }
     }
