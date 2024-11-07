@@ -89,7 +89,7 @@ pub fn read(
     });
 
     let read_prefix_fields = fields.iter().filter_map(|field| match field {
-        Field::Prefix { bind, ty, name, .. } => Some(read_prefix(tag, bind, name, ty, &ele_name)),
+        Field::Prefix { bind, ty, name, tag, } => Some(read_prefix(tag, bind, name, ty, &ele_name)),
         _ => None,
     });
 
@@ -273,14 +273,13 @@ fn read_prefix(
     ty: &Type,
     ele_name: &TokenStream,
 ) -> TokenStream {
-    let name_lit = format!("{}", name);
-    let len = name_lit.len() + 1;
+    let len = tag.value().len() + 1;
     if !ty.is_map() {
         panic!("`prefix` attribute only support Map.");
     } else {
         if let Type::OptionMap(_, arg2) = ty {
             quote! {
-                if key.starts_with(#name_lit) {
+                if key.starts_with(#tag) {
                     #bind.insert(
                         key[#len..].to_string(),
                         __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
@@ -289,7 +288,7 @@ fn read_prefix(
             }
         } else if let Type::Map(_, arg2) = ty {
             quote! {
-                if key.starts_with(#name_lit) {
+                if key.starts_with(#tag) {
                     #bind.insert(
                         key[#len..].to_string(),
                         __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
@@ -377,7 +376,7 @@ fn from_str(ty: &Type, with: &Option<ExprPath>) -> TokenStream {
     }
 
     match &ty {
-        Type::CowStr | Type::OptionCowStr | Type::VecCowStr => quote! { __value },
+        Type::CowStr | Type::OptionCowStr | Type::VecCowStr | Type::Map(_, _) | Type::OptionMap(_, _) => quote! { __value },
         Type::Bool | Type::OptionBool | Type::VecBool => quote! {
             match &*__value {
                 "t" | "true" | "y" | "yes" | "on" | "1" => true,
@@ -387,9 +386,6 @@ fn from_str(ty: &Type, with: &Option<ExprPath>) -> TokenStream {
         },
         Type::T(ty) | Type::OptionT(ty) | Type::VecT(ty) => quote! {
             <#ty as std::str::FromStr>::from_str(&__value).map_err(|e| XmlError::FromStr(e.into()))?
-        },
-        Type::Map(_, _) | Type::OptionMap(_, _) => quote! {
-            __value
         },
     }
 }
