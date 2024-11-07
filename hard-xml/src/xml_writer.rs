@@ -49,7 +49,7 @@ impl<W: Write> XmlWriter<W> {
         Ok(())
     }
 
-    pub fn write_prefix<T: ToString>(&mut self, tag: &str, content: HashMap<String, T>) -> Result<()> {
+    pub fn write_prefix<T: ToString>(&mut self, tag: &str, content: &HashMap<String, T>) -> Result<()> {
         for (key, value) in content.iter() {
             self.write_element_start(&format!("{}:{}", tag, key))?;
             self.write_element_end_open()?;
