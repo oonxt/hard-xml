@@ -385,7 +385,7 @@ impl FieldKind {
             (None, &[], None, false, false) => {
                 ctx.push_new_error(
                     span,
-                    "field should have one of `attr`, `child`, `text` or `flatten_text` attribute",
+                    "field should have one of `attr`, `child`, `prefix`, `text` or `flatten_text` attribute",
                 );
                 None
             }

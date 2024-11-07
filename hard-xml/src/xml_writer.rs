@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Result;
 use std::io::Write;
 
@@ -45,6 +46,16 @@ impl<W: Write> XmlWriter<W> {
             self.write_text(content)?;
         }
         self.write_element_end_close(tag)?;
+        Ok(())
+    }
+
+    pub fn write_prefix<T: ToString>(&mut self, tag: &str, content: HashMap<String, T>) -> Result<()> {
+        for (key, value) in content.iter() {
+            self.write_element_start(&format!("{}:{}", tag, key))?;
+            self.write_element_end_open()?;
+            self.write_text(&value.to_string())?;
+            self.write_element_end_close(&format!("{}:{}", tag, key))?;
+        }
         Ok(())
     }
 
