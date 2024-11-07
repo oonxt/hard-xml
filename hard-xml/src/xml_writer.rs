@@ -51,10 +51,7 @@ impl<W: Write> XmlWriter<W> {
 
     pub fn write_prefix<T: ToString>(&mut self, tag: &str, content: &HashMap<String, T>) -> Result<()> {
         for (key, value) in content.iter() {
-            self.write_element_start(&format!("{}:{}", tag, key))?;
-            self.write_element_end_open()?;
-            self.write_text(&value.to_string())?;
-            self.write_element_end_close(&format!("{}:{}", tag, key))?;
+            self.write_attribute(&format!("{}:{}", tag, key), &value.to_string())?
         }
         Ok(())
     }
