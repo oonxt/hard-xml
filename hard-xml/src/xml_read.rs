@@ -1,4 +1,5 @@
 use crate::{XmlReader, XmlResult};
+use std::io::{BufReader, Read};
 
 pub trait XmlRead<'a>: Sized {
     fn from_reader(reader: &mut XmlReader<'a>) -> XmlResult<Self>;
@@ -7,16 +8,10 @@ pub trait XmlRead<'a>: Sized {
         let mut reader = XmlReader::new(text);
         Self::from_reader(&mut reader)
     }
-    fn from_file(path: impl AsRef<std::path::Path>) -> XmlResult<Self> {
-        let text = std::fs::read_to_string(path)?;
-        let mut reader = XmlReader::new(&text);
-        Self::from_reader(&mut reader)
-    }
 
-    fn from_buffer<R: std::io::BufRead>(mut buf: R) -> XmlResult<Self> {
-        let mut buffer = String::new();
-        buf.read_to_string(&mut buffer)?;
-        let mut reader = XmlReader::new(&buffer);
+    fn from_buffer<R: std::io::BufRead + 'a>(mut buf: R, buffer: &'a mut String) -> XmlResult<Self> {
+        buf.read_to_string(buffer)?;
+        let mut reader = XmlReader::new(buffer);
         Self::from_reader(&mut reader)
     }
 }
