@@ -273,11 +273,17 @@ fn to_str(ty: &Type, with: &Option<ExprPath>, convert: bool) -> TokenStream {
         }
         Type::Bool | Type::OptionBool | Type::VecBool => if convert {
             quote! {
-            if __value { "1" } else {"0"}
+                match __value {
+                    true => "1",
+                    false => "0",
+                }
         }
         } else {
             quote! {
-            if __value { "true" } else {"false"}
+                match __value {
+                    true => "true",
+                    false => "false",
+                }
         }
         },
         Type::T(_) | Type::OptionT(_) | Type::VecT(_) => {
