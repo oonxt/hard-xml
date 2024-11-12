@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{Ident, LitStr, ExprPath};
+use syn::{ExprPath, Ident, LitStr};
 
 use crate::types::{Field, Type};
 
@@ -229,7 +229,6 @@ fn write_flatten_text(
 
 
 fn write_prefix(tag: &LitStr, name: &Ident, ty: &Type, ele_name: &TokenStream) -> TokenStream {
-
     if !ty.is_map() {
         panic!("`prefix` attribute only support Map.");
     } else if ty.is_option() {
@@ -272,15 +271,18 @@ fn to_str(ty: &Type, with: &Option<ExprPath>, convert: bool) -> TokenStream {
         Type::CowStr | Type::OptionCowStr | Type::VecCowStr => {
             quote! { __value }
         }
-        Type::Bool | Type::OptionBool | Type::VecBool => quote! {
-            match __value {
-                true => if convert {"1"} else {"true"},
-                false => if convert {"0"} else {"false"}
-            }
+        Type::Bool | Type::OptionBool | Type::VecBool => if convert {
+            quote! {
+            if __value { "1" } else {"0"}
+        }
+        } else {
+            quote! {
+            if __value { "true" } else {"false"}
+        }
         },
         Type::T(_) | Type::OptionT(_) | Type::VecT(_) => {
             quote! { &format!("{}", __value) }
-        },
+        }
         Type::Map(_, _) | Type::OptionMap(_, _) => {
             quote! { &format!("{}", __value)}
         }
