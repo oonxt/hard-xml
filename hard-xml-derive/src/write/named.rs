@@ -164,7 +164,7 @@ fn write_text(
     is_cdata: bool,
 ) -> TokenStream {
     let to_str = to_str(ty, with);
-    let wrtie_fn = if is_cdata {
+    let write_fn = if is_cdata {
         quote!(write_cdata_text)
     } else {
         quote!(write_text)
@@ -177,7 +177,7 @@ fn write_text(
 
         let __value = &#name;
 
-        writer.#wrtie_fn(#to_str)?;
+        writer.#write_fn(#to_str)?;
 
         hard_xml::log_finish_writing_field!(#ele_name, #name);
 
@@ -274,8 +274,8 @@ fn to_str(ty: &Type, with: &Option<ExprPath>) -> TokenStream {
         }
         Type::Bool | Type::OptionBool | Type::VecBool => quote! {
             match __value {
-                true => "true",
-                false => "false"
+                true => "1",
+                false => "0"
             }
         },
         Type::T(_) | Type::OptionT(_) | Type::VecT(_) => {
