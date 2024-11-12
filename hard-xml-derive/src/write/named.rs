@@ -98,7 +98,7 @@ pub fn write(tag: &LitStr, ele_name: TokenStream, fields: &[Field]) -> TokenStre
 }
 
 fn write_attrs(tag: &LitStr, name: &Ident, ty: &Type, with: &Option<ExprPath>, ele_name: &TokenStream) -> TokenStream {
-    let to_str = to_str(ty, with);
+    let to_str = to_str(ty, with, true);
 
     if ty.is_vec() {
         panic!("`attr` attribute doesn't support Vec.");
@@ -163,7 +163,7 @@ fn write_text(
     ele_name: &TokenStream,
     is_cdata: bool,
 ) -> TokenStream {
-    let to_str = to_str(ty, with);
+    let to_str = to_str(ty, with, false);
     let write_fn = if is_cdata {
         quote!(write_cdata_text)
     } else {
@@ -193,7 +193,7 @@ fn write_flatten_text(
     ele_name: &TokenStream,
     is_cdata: bool,
 ) -> TokenStream {
-    let to_str = to_str(ty, with);
+    let to_str = to_str(ty, with, false);
 
     if ty.is_vec() {
         quote! {
@@ -258,7 +258,7 @@ fn write_prefix(tag: &LitStr, name: &Ident, ty: &Type, ele_name: &TokenStream) -
     }
 }
 
-fn to_str(ty: &Type, with: &Option<ExprPath>) -> TokenStream {
+fn to_str(ty: &Type, with: &Option<ExprPath>, convert: bool) -> TokenStream {
     if let Some(with_mod) = with {
         return quote! {
             {
@@ -274,8 +274,8 @@ fn to_str(ty: &Type, with: &Option<ExprPath>) -> TokenStream {
         }
         Type::Bool | Type::OptionBool | Type::VecBool => quote! {
             match __value {
-                true => "1",
-                false => "0"
+                true => if convert {"1"} else {"true"},
+                false => if convert {"0"} else {"false"}
             }
         },
         Type::T(_) | Type::OptionT(_) | Type::VecT(_) => {
