@@ -57,6 +57,11 @@ impl Container {
     }
 }
 
+pub (crate) enum Prefix {
+    Prefix,
+    Startswith
+}
+
 pub(crate) struct Field {
     pub(crate) default: bool,
     pub(crate) attr_tag: Option<LitStr>,
@@ -64,7 +69,7 @@ pub(crate) struct Field {
     pub(crate) is_text: bool,
     pub(crate) flatten_text_tag: Option<LitStr>,
     pub(crate) is_cdata: bool,
-    pub(crate) is_prefix: bool,
+    pub(crate) prefix: Option<Prefix>,
     pub(crate) with: Option<ExprPath>,
 }
 
@@ -76,7 +81,7 @@ impl Field {
         let mut is_text = false;
         let mut flatten_text_tag = None;
         let mut is_cdata = false;
-        let mut is_prefix = false;
+        let mut prefix = None;
         let mut with = None;
 
 
@@ -147,7 +152,39 @@ impl Field {
                             ));
                         } else {
                             attr_tag = Some(lit);
-                            is_prefix = true;
+                            prefix = Some(Prefix::Prefix);
+                        }
+                    } else {
+                        context.push(Error::new_spanned(m.lit, "expected a string literal"));
+                    }
+                }
+                NestedMeta::Meta(Meta::NameValue(m)) if m.path.is_ident("startswith") => {
+                    if let Lit::Str(lit) = m.lit {
+                        if attr_tag.is_some() {
+                            context.push(Error::new_spanned(m.path, "duplicate `startswith` attribute"));
+                        } else if is_text {
+                            context.push(Error::new_spanned(
+                                m.path,
+                                "`startswith` attribute and `text` attribute is disjoint",
+                            ));
+                        } else if is_cdata {
+                            context.push(Error::new_spanned(
+                                m.path,
+                                "`startswith` attribute and `cdata` attribute is disjoint",
+                            ))
+                        } else if !child_tags.is_empty() {
+                            context.push(Error::new_spanned(
+                                m.path,
+                                "`startswith` attribute and `child` attribute is disjoint",
+                            ));
+                        } else if flatten_text_tag.is_some() {
+                            context.push(Error::new_spanned(
+                                m.path,
+                                "`startswith` attribute and `flatten_text` attribute is disjoint",
+                            ));
+                        } else {
+                            attr_tag = Some(lit);
+                            prefix = Some(Prefix::Startswith);
                         }
                     } else {
                         context.push(Error::new_spanned(m.lit, "expected a string literal"));
@@ -271,7 +308,7 @@ impl Field {
             is_text,
             flatten_text_tag,
             is_cdata,
-            is_prefix,
+            prefix,
             with,
         }
     }

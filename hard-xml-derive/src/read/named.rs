@@ -13,7 +13,9 @@ pub fn read(
     let init_fields = fields.iter().map(|field| match field {
         Field::Attribute { bind, ty, .. }
         | Field::Child { bind, ty, .. }
-        | Field::FlattenText { bind, ty, .. } | Field::Prefix { bind, ty, .. } => init_value(bind, ty),
+        | Field::FlattenText { bind, ty, .. } 
+        | Field::Prefix { bind, ty, .. }
+        | Field::Startswith { bind, ty, .. }=> init_value(bind, ty),
         Field::Text { bind, .. } => quote! { let #bind; },
     });
 
@@ -45,7 +47,13 @@ pub fn read(
             bind,
             ty,
             ..
-        } => return_value(name, bind, ty, false, &ele_name),
+        }
+        | Field::Startswith {
+            name,
+            bind,
+            ty,
+            ..
+        }=> return_value(name, bind, ty, false, &ele_name),
     });
 
     let read_attr_fields = fields.iter().filter_map(|field| match field {
@@ -90,6 +98,7 @@ pub fn read(
 
     let read_prefix_fields = fields.iter().filter_map(|field| match field {
         Field::Prefix { bind, ty, name, tag, } => Some(read_prefix(tag, bind, name, ty, &ele_name)),
+        Field::Startswith { bind, ty, name, tag, } => Some(read_starts(tag, bind, name, ty, &ele_name)),
         _ => None,
     });
 
@@ -276,6 +285,41 @@ fn read_prefix(
     let len = tag.value().len() + 1;
     if !ty.is_map() {
         panic!("`prefix` attribute only support Map.");
+    } else {
+        if let Type::OptionMap(_, arg2) = ty {
+            quote! {
+                if key.starts_with(#tag) {
+                    #bind.insert(
+                        key[#len..].to_string(),
+                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                    );
+                }
+            }
+        } else if let Type::Map(_, arg2) = ty {
+            quote! {
+                if key.starts_with(#tag) {
+                    #bind.insert(
+                        key[#len..].to_string(),
+                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                    );
+                }
+            }
+        } else {
+            quote! {}
+        }
+    }
+}
+
+fn read_starts(
+    tag: &LitStr,
+    bind: &Ident,
+    name: &TokenStream,
+    ty: &Type,
+    ele_name: &TokenStream,
+) -> TokenStream {
+    let len = tag.value().len() + 1;
+    if !ty.is_map() {
+        panic!("`startswith` attribute only support Map.");
     } else {
         if let Type::OptionMap(_, arg2) = ty {
             quote! {

@@ -7,6 +7,7 @@ use crate::{
     utils::{elide_type_lifetimes, Context},
 };
 use bitflags::bitflags;
+use crate::attrs::Prefix;
 
 type Result<T, E = Vec<syn::Error>> = std::result::Result<T, E>;
 
@@ -124,7 +125,7 @@ pub enum Field {
         tag: LitStr,
         is_cdata: bool,
     },
-    /// Arrtibute Field
+    /// Prefix Field
     ///
     /// ```ignore
     /// struct Foo {
@@ -133,6 +134,20 @@ pub enum Field {
     /// }
     /// ```
     Prefix {
+        name: TokenStream,
+        bind: Ident,
+        ty: Type,
+        tag: LitStr,
+    },
+    /// Prefix Field
+    ///
+    /// ```ignore
+    /// struct Foo {
+    ///     #[xml(startswith = "$tag")]
+    ///     $name: $ty,
+    /// }
+    /// ```
+    Startswith {
         name: TokenStream,
         bind: Ident,
         ty: Type,
@@ -303,6 +318,7 @@ pub(crate) enum FieldKind {
     },
     Text(bool),
     Prefix(LitStr),
+    Startswith(LitStr),
 }
 
 impl FieldKind {
@@ -358,6 +374,12 @@ impl FieldKind {
                 ty,
                 tag,
             },
+            FieldKind::Startswith(tag) => Field::Startswith {
+                name,
+                bind,
+                ty,
+                tag,
+            },
         })
     }
 
@@ -367,22 +389,23 @@ impl FieldKind {
             child_tags,
             flatten_text_tag,
             is_text,
-            is_prefix,
+            prefix,
             ..
         } = attrs;
 
-        match (attr_tag, child_tags.as_slice(), flatten_text_tag, is_text, is_prefix) {
-            (Some(tag), &[], None, false, false) => Some(Self::Attribute(tag, attrs.default)),
-            (None, &[_, ..], None, false, false) => Some(Self::Child(child_tags, attrs.default)),
-            (None, &[], Some(tag), false, false) => Some(Self::FlattenText {
+        match (attr_tag, child_tags.as_slice(), flatten_text_tag, is_text, prefix) {
+            (Some(tag), &[], None, false, None) => Some(Self::Attribute(tag, attrs.default)),
+            (None, &[_, ..], None, false, None) => Some(Self::Child(child_tags, attrs.default)),
+            (None, &[], Some(tag), false, None) => Some(Self::FlattenText {
                 tag,
                 cdata: attrs.is_cdata,
                 default: attrs.default,
             }),
-            (None, &[], None, true, false) => Some(Self::Text(attrs.is_cdata)),
-            (Some(tag), &[], None, false, true) => Some(Self::Prefix(tag)),
+            (None, &[], None, true, None) => Some(Self::Text(attrs.is_cdata)),
+            (Some(tag), &[], None, false, Some(Prefix::Prefix)) => Some(Self::Prefix(tag)),
+            (Some(tag), &[], None, false, Some(Prefix::Startswith)) => Some(Self::Startswith(tag)),
 
-            (None, &[], None, false, false) => {
+            (None, &[], None, false, None) => {
                 ctx.push_new_error(
                     span,
                     "field should have one of `attr`, `child`, `prefix`, `text` or `flatten_text` attribute",

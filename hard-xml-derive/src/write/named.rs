@@ -36,6 +36,7 @@ pub fn write(tag: &LitStr, ele_name: TokenStream, fields: &[Field]) -> TokenStre
 
     let write_maps = fields.iter().filter_map(|field| match field {
         Field::Prefix { tag, bind, ty, .. } => Some(write_prefix(tag, bind, ty, &ele_name)),
+        Field::Startswith { tag, bind, ty, .. } => Some(write_starts(tag, bind, ty, &ele_name)),
         _ => None,
     });
 
@@ -231,6 +232,35 @@ fn write_flatten_text(
 fn write_prefix(tag: &LitStr, name: &Ident, ty: &Type, ele_name: &TokenStream) -> TokenStream {
     if !ty.is_map() {
         panic!("`prefix` attribute only support Map.");
+    } else if ty.is_option() {
+        quote! {
+            hard_xml::log_start_writing_field!(#ele_name, #name);
+
+            if let Some(__value) = #name {
+                for (k, v) in __value {
+                    writer.write_attribute(format!("{}:{}", #tag, k), &v.to_string())?;
+                }
+            }
+
+            hard_xml::log_finish_writing_field!(#ele_name, #name);
+        }
+    } else {
+        quote! {
+            hard_xml::log_start_writing_field!(#ele_name, #name);
+
+            let __value = #name;
+            for (k, v) in __value {
+                writer.write_attribute(&format!("{}:{}", #tag, k), &v.to_string())?;
+            }
+
+            hard_xml::log_finish_writing_field!(#ele_name, #name);
+        }
+    }
+}
+
+fn write_starts(tag: &LitStr, name: &Ident, ty: &Type, ele_name: &TokenStream) -> TokenStream {
+    if !ty.is_map() {
+        panic!("`startswith` attribute only support Map.");
     } else if ty.is_option() {
         quote! {
             hard_xml::log_start_writing_field!(#ele_name, #name);

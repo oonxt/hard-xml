@@ -17,6 +17,7 @@ pub fn impl_write(element: Element) -> TokenStream {
                     let bindings = fields.iter().map(|field| match field {
                         Field::Attribute { bind, name, .. }
                         | Field::Prefix { bind, name, .. }
+                        | Field::Startswith { bind, name, .. }
                         | Field::Child { bind, name, .. }
                         | Field::Text { bind, name, .. }
                         | Field::FlattenText { bind, name, .. } => quote!( #name: #bind ),
@@ -50,6 +51,7 @@ pub fn impl_write(element: Element) -> TokenStream {
                 let bindings = fields.iter().map(|field| match field {
                     Field::Attribute { bind, name, .. }
                     | Field::Prefix { bind, name, .. }
+                    | Field::Startswith { bind, name, .. }
                     | Field::Child { bind, name, .. }
                     | Field::Text { bind, name, .. }
                     | Field::FlattenText { bind, name, .. } => quote!( #name: #bind ),
