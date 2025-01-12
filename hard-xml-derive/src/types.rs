@@ -451,7 +451,7 @@ impl Type {
     pub fn is_option(&self) -> bool {
         matches!(
             self,
-            Type::OptionCowStr | Type::OptionT(_) | Type::OptionBool
+            Type::OptionCowStr | Type::OptionT(_) | Type::OptionBool | Type::OptionMap(_,_)
         )
     }
 

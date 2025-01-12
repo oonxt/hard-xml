@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{ExprPath, Ident, LitStr};
@@ -15,7 +16,7 @@ pub fn read(
         | Field::Child { bind, ty, .. }
         | Field::FlattenText { bind, ty, .. } 
         | Field::Prefix { bind, ty, .. }
-        | Field::Startswith { bind, ty, .. }=> init_value(bind, ty),
+        | Field::Startswith { bind, ty, .. } => init_value(bind, ty),
         Field::Text { bind, .. } => quote! { let #bind; },
     });
 
@@ -206,12 +207,18 @@ fn return_value(
     default: bool,
     ele_name: &TokenStream,
 ) -> TokenStream {
-    if ty.is_vec() || ty.is_option() {
-        quote! { #name: #bind }
-    } else if ty.is_map() {
-        quote! {
-            #name: #bind
+    if ty.is_map() {
+        if ty.is_option() {
+            quote! {
+                #name: if #bind.is_empty() { None } else { Some(#bind) }
+            }
+        } else {
+            quote! {
+                #name: #bind
+            }
         }
+    } else if ty.is_vec() || ty.is_option() {
+        quote! { #name: #bind }
     } else if default {
         quote! { #name: #bind.unwrap_or_default() }
     } else {
@@ -328,8 +335,7 @@ fn read_starts(
                         "".to_string(),
                         __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
                     );
-                }
-                else if key.starts_with(#tag) {
+                } else if key.starts_with(#tag) {
                     #bind.insert(
                         key[#len..].to_string(),
                         __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?

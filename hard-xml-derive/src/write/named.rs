@@ -238,7 +238,7 @@ fn write_prefix(tag: &LitStr, name: &Ident, ty: &Type, ele_name: &TokenStream) -
 
             if let Some(__value) = #name {
                 for (k, v) in __value {
-                    writer.write_attribute(format!("{}:{}", #tag, k), &v.to_string())?;
+                    writer.write_attribute(&format!("{}:{}", #tag, k), &v.to_string())?;
                 }
             }
 
@@ -268,9 +268,9 @@ fn write_starts(tag: &LitStr, name: &Ident, ty: &Type, ele_name: &TokenStream) -
             if let Some(__value) = #name {
                 for (k, v) in __value {
                     if k.is_empty() {
-                        writer.write_attribute(format!("{}", #tag), &v.to_string())?;
+                        writer.write_attribute(&format!("{}", #tag), &v.to_string())?;
                     } else {
-                        writer.write_attribute(format!("{}:{}", #tag, k), &v.to_string())?;
+                        writer.write_attribute(&format!("{}:{}", #tag, k), &v.to_string())?;
                     }
                 }
             }
