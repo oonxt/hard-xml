@@ -279,7 +279,13 @@ fn read_prefix(
     } else {
         if let Type::OptionMap(_, arg2) = ty {
             quote! {
-                if key.starts_with(#tag) {
+                if key == #tag {
+                    #bind.insert(
+                        "".to_string(),
+                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                    );
+                }
+                else if key.starts_with(#tag) {
                     #bind.insert(
                         key[#len..].to_string(),
                         __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
@@ -288,7 +294,13 @@ fn read_prefix(
             }
         } else if let Type::Map(_, arg2) = ty {
             quote! {
-                if key.starts_with(#tag) {
+                if key == #tag {
+                    #bind.insert(
+                        "".to_string(),
+                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                    );
+                }
+                else if key.starts_with(#tag) {
                     #bind.insert(
                         key[#len..].to_string(),
                         __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?

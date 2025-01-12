@@ -237,7 +237,11 @@ fn write_prefix(tag: &LitStr, name: &Ident, ty: &Type, ele_name: &TokenStream) -
 
             if let Some(__value) = #name {
                 for (k, v) in __value {
-                    writer.write_attribute(format!("{}:{}", #tag, k), &v.to_string())?;
+                    if k.is_empty() {
+                        writer.write_attribute(format!("{}", #tag), &v.to_string())?;
+                    } else {
+                        writer.write_attribute(format!("{}:{}", #tag, k), &v.to_string())?;
+                    }
                 }
             }
 
@@ -249,7 +253,11 @@ fn write_prefix(tag: &LitStr, name: &Ident, ty: &Type, ele_name: &TokenStream) -
 
             let __value = #name;
             for (k, v) in __value {
-                writer.write_attribute(&format!("{}:{}", #tag, k), &v.to_string())?;
+                if k.is_empty() {
+                    writer.write_attribute(&format!("{}", #tag), &v.to_string())?;
+                } else {
+                    writer.write_attribute(&format!("{}:{}", #tag, k), &v.to_string())?;
+                }
             }
 
             hard_xml::log_finish_writing_field!(#ele_name, #name);
@@ -277,14 +285,14 @@ fn to_str(ty: &Type, with: &Option<ExprPath>, convert: bool) -> TokenStream {
                     true => "1",
                     false => "0",
                 }
-        }
+            }
         } else {
             quote! {
                 match __value {
                     true => "true",
                     false => "false",
                 }
-        }
+            }
         },
         Type::T(_) | Type::OptionT(_) | Type::VecT(_) => {
             quote! { &format!("{}", __value) }
