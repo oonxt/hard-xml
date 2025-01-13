@@ -191,6 +191,10 @@ fn init_value(name: &Ident, ty: &Type) -> TokenStream {
             quote! { let mut #name = std::collections::HashMap::<#arg1, #arg2>::new(); }
         } else if let Type::OptionMap(arg1, arg2) = ty {
             quote! { let mut #name = std::collections::HashMap::<#arg1, #arg2>::new(); }
+        } else if let Type::VecTuple(arg1, arg2) = ty {
+            quote! { let mut #name: Vec<(#arg1, #arg2)> = Vec::new(); }
+        } else if let Type::OptionVecTuple(arg1, arg2) = ty {
+            quote! { let mut #name: Vec<(#arg1, #arg2)> = Vec::new(); }
         } else {
             quote! {}
         }
@@ -311,6 +315,24 @@ fn read_prefix(
                     );
                 }
             }
+        } else if let Type::VecTuple(_, arg2) = ty {
+            quote! {
+                if key.starts_with(#tag) {
+                    #bind.push((
+                        key[#len..].to_string(),
+                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                    ));
+                }
+            }
+        } else if let Type::OptionVecTuple(_, arg2) = ty {
+            quote! {
+                if key.starts_with(#tag) {
+                    #bind.push((
+                        key[#len..].to_string(),
+                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                    ));
+                }
+            }
         } else {
             quote! {}
         }
@@ -355,6 +377,21 @@ fn read_starts(
                         key[#len..].to_string(),
                         __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
                     );
+                }
+            }
+        } else if let Type::VecTuple(_, arg2) = ty {
+            quote! {
+                if key == #tag {
+                    #bind.push((
+                        "".to_string(),
+                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                    ));
+                }
+                else if key.starts_with(#tag) {
+                    #bind.push((
+                        key[#len..].to_string(),
+                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                    ));
                 }
             }
         } else {
@@ -438,7 +475,7 @@ fn from_str(ty: &Type, with: &Option<ExprPath>) -> TokenStream {
     }
 
     match &ty {
-        Type::CowStr | Type::OptionCowStr | Type::VecCowStr | Type::Map(_, _) | Type::OptionMap(_, _) => quote! { __value },
+        Type::CowStr | Type::OptionCowStr | Type::VecCowStr | Type::Map(_, _) | Type::OptionMap(_, _) | Type::VecTuple(_, _) | Type::OptionVecTuple(_, _) => quote! { __value },
         Type::Bool | Type::OptionBool | Type::VecBool => quote! {
             match &*__value {
                 "t" | "true" | "y" | "yes" | "on" | "1" => true,

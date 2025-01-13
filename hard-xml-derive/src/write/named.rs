@@ -327,7 +327,7 @@ fn to_str(ty: &Type, with: &Option<ExprPath>, convert: bool) -> TokenStream {
         Type::T(_) | Type::OptionT(_) | Type::VecT(_) => {
             quote! { &format!("{}", __value) }
         }
-        Type::Map(_, _) | Type::OptionMap(_, _) => {
+        Type::Map(_, _) | Type::OptionMap(_, _) | Type::VecTuple(_, _) | Type::OptionVecTuple(_, _) => {
             quote! { &format!("{}", __value)}
         }
     }

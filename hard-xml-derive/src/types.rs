@@ -176,8 +176,12 @@ pub enum Type {
     OptionBool,
     // Map<String, String>
     Map(syn::Type, syn::Type),
+    // Vec<(String, String)>
+    VecTuple(syn::Type, syn::Type),
     // Option<Map<String, String>>
     OptionMap(syn::Type, syn::Type),
+    // Option<Vec<(String, String)>>
+    OptionVecTuple(syn::Type, syn::Type),
 }
 
 impl Element {
@@ -451,7 +455,7 @@ impl Type {
     pub fn is_option(&self) -> bool {
         matches!(
             self,
-            Type::OptionCowStr | Type::OptionT(_) | Type::OptionBool | Type::OptionMap(_,_)
+            Type::OptionCowStr | Type::OptionT(_) | Type::OptionBool | Type::OptionMap(_,_) | Type::OptionVecTuple(_,_)
         )
     }
 
@@ -460,7 +464,7 @@ impl Type {
     }
 
     pub fn is_map(&self) -> bool {
-        matches!(self, Type::Map(_, _) | Type::OptionMap(_, _))
+        matches!(self, Type::Map(_, _) | Type::OptionMap(_, _) | Type::VecTuple(_, _) | Type::OptionVecTuple(_, _))
     }
 
     fn parse(mut ty: syn::Type) -> Self {
@@ -476,7 +480,41 @@ impl Type {
             };
             if seg.ident == "Vec" && args.len() == 1 {
                 match args[0] {
-                    GenericArgument::Type(ref arg) => Some(arg),
+                    GenericArgument::Type(ref arg) => {
+                        match arg {
+                            syn::Type::Tuple(_) => None, // 如果是元组，返回 None
+                            _ => Some(arg),
+                        }
+                    }
+                    _ => None,
+                }
+            } else {
+                None
+            }
+        }
+
+        fn is_vec_tuple(ty: &syn::Type) -> Option<(&syn::Type, &syn::Type)> {
+            let path = match ty {
+                syn::Type::Path(ty) => &ty.path,
+                _ => return None,
+            };
+            let seg = path.segments.last()?;
+            let args = match &seg.arguments {
+                PathArguments::AngleBracketed(bracketed) => &bracketed.args,
+                _ => return None,
+            };
+            if seg.ident == "Vec" && args.len() == 1 {
+                match &args[0] {
+                    GenericArgument::Type(ref arg) => {
+                        match arg {
+                            syn::Type::Tuple(tuple) if tuple.elems.len() == 2 => {
+                                let elem1 = &tuple.elems[0];
+                                let elem2 = &tuple.elems[1];
+                                Some((elem1, elem2))
+                            }
+                            _ => None,
+                        }
+                    }
                     _ => None,
                 }
             } else {
@@ -568,6 +606,8 @@ impl Type {
                 Type::OptionBool
             } else if let Some((ty1, ty2)) = is_map(ty) {
                 Type::OptionMap(ty1.clone(), ty2.clone())
+            } else if let Some((ty1, ty2)) = is_vec_tuple(ty) {
+                Type::OptionVecTuple(ty1.clone(), ty2.clone())
             } else {
                 Type::OptionT(ty.clone())
             }
@@ -577,6 +617,8 @@ impl Type {
             Type::Bool
         } else if let Some((ty1, ty2)) = is_map(&ty) {
             Type::Map(ty1.clone(), ty2.clone())
+        } else if let Some((ty1, ty2)) = is_vec_tuple(&ty) {
+            Type::VecTuple(ty1.clone(), ty2.clone())
         } else {
             Type::T(ty)
         }
