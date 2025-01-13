@@ -297,39 +297,55 @@ fn read_prefix(
     if !ty.is_map() {
         panic!("`prefix` attribute only support Map.");
     } else {
-        if let Type::OptionMap(_, arg2) = ty {
+        if let Type::OptionMap(arg1, arg2) = ty {
+            let key_other = map_from(&Type::parse(arg1.clone()), quote! { &key[#len..] });
+            let value_default = map_from(&Type::parse(arg2.clone()), quote! { __value });
             quote! {
                 if key.starts_with(#tag) {
                     #bind.insert(
-                        key[#len..].to_string(),
-                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                        #key_other,
+                        // key[#len..].to_string(),
+                        #value_default,
+                        // __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
                     );
                 }
             }
-        } else if let Type::Map(_, arg2) = ty {
+        } else if let Type::Map(arg1, arg2) = ty {
+            let key_other = map_from(&Type::parse(arg1.clone()), quote! { &key[#len..] });
+            let value_default = map_from(&Type::parse(arg2.clone()), quote! { __value });
             quote! {
                 if key.starts_with(#tag) {
                     #bind.insert(
-                        key[#len..].to_string(),
-                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                        #key_other,
+                        // key[#len..].to_string(),
+                        #value_default,
+                        // __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
                     );
                 }
             }
-        } else if let Type::VecTuple(_, arg2) = ty {
+        } else if let Type::VecTuple(arg1, arg2) = ty {
+            let key_other = map_from(&Type::parse(arg1.clone()), quote! { &key[#len..] });
+            let value_default = map_from(&Type::parse(arg2.clone()), quote! { __value });
             quote! {
                 if key.starts_with(#tag) {
-                    #bind.push((
-                        key[#len..].to_string(),
-                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                    #bind.insert((
+                        #key_other,
+                        // key[#len..].to_string(),
+                        #value_default,
+                        // __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
                     ));
                 }
             }
-        } else if let Type::OptionVecTuple(_, arg2) = ty {
+        } else if let Type::OptionVecTuple(arg1, arg2) = ty {
+            let key_other = map_from(&Type::parse(arg1.clone()), quote! { &key[#len..] });
+            let value_default = map_from(&Type::parse(arg2.clone()), quote! { __value });
             quote! {
                 if key.starts_with(#tag) {
                     #bind.push((
-                        key[#len..].to_string(),
-                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                        #key_other,
+                        // key[#len..].to_string(),
+                        #value_default,
+                        // __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
                     ));
                 }
             }
@@ -350,47 +366,87 @@ fn read_starts(
     if !ty.is_map() {
         panic!("`startswith` attribute only support Map.");
     } else {
-        if let Type::OptionMap(_, arg2) = ty {
+        if let Type::OptionMap(arg1, arg2) = ty {
+            let key_default = map_from(&Type::parse(arg1.clone()), quote! { "" });
+            let key_other = map_from(&Type::parse(arg1.clone()), quote! { &key[#len..] });
+            let value_default = map_from(&Type::parse(arg2.clone()), quote! { __value });
             quote! {
                 if key == #tag {
                     #bind.insert(
-                        "".to_string(),
-                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                        #key_default,
+                        // key[#len..].to_string(),
+                        #value_default,
+                        // __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
                     );
                 } else if key.starts_with(#tag) {
                     #bind.insert(
-                        key[#len..].to_string(),
-                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                        #key_other,
+                        // key[#len..].to_string(),
+                        #value_default
+                        // __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
                     );
                 }
             }
-        } else if let Type::Map(_, arg2) = ty {
+        } else if let Type::Map(arg1, arg2) = ty {
+            let key_default = map_from(&Type::parse(arg1.clone()), quote! { "" });
+            let key_other = map_from(&Type::parse(arg1.clone()), quote! { &key[#len..] });
+            let value_default = map_from(&Type::parse(arg2.clone()), quote! { __value });
             quote! {
                 if key == #tag {
                     #bind.insert(
-                        "".to_string(),
-                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                        #key_default,
+                        // key[#len..].to_string(),
+                        #value_default,
+                        // __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
                     );
-                }
-                else if key.starts_with(#tag) {
+                } else if key.starts_with(#tag) {
                     #bind.insert(
-                        key[#len..].to_string(),
-                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                        #key_other,
+                        // key[#len..].to_string(),
+                        #value_default
+                        // __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
                     );
                 }
             }
-        } else if let Type::VecTuple(_, arg2) = ty {
+        } else if let Type::VecTuple(arg1, arg2) = ty {
+            let key_default = map_from(&Type::parse(arg1.clone()), quote! { "" });
+            let key_other = map_from(&Type::parse(arg1.clone()), quote! { &key[#len..] });
+            let value_default = map_from(&Type::parse(arg2.clone()), quote! { __value });
             quote! {
                 if key == #tag {
                     #bind.push((
-                        "".to_string(),
-                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                        #key_default,
+                        // key[#len..].to_string(),
+                        #value_default,
+                        // __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                    ));
+                } else if key.starts_with(#tag) {
+                    #bind.push((
+                        #key_other,
+                        // key[#len..].to_string(),
+                        #value_default
+                        // __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
                     ));
                 }
-                else if key.starts_with(#tag) {
+            }
+        } else if let Type::OptionVecTuple(arg1, arg2) = ty {
+            let key_default = map_from(&Type::parse(arg1.clone()), quote! { "" });
+            let key_other = map_from(&Type::parse(arg1.clone()), quote! { &key[#len..] });
+            let value_default = map_from(&Type::parse(arg2.clone()), quote! { __value });
+            quote! {
+                if key == #tag {
                     #bind.push((
-                        key[#len..].to_string(),
-                        __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                        #key_default,
+                        // key[#len..].to_string(),
+                        #value_default,
+                        // __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
+                    ));
+                } else if key.starts_with(#tag) {
+                    #bind.push((
+                        #key_other,
+                        // key[#len..].to_string(),
+                        #value_default
+                        // __value.parse::<#arg2>().map_err(|e| XmlError::FromStr(e.into()))?
                     ));
                 }
             }
@@ -486,5 +542,27 @@ fn from_str(ty: &Type, with: &Option<ExprPath>) -> TokenStream {
         Type::T(ty) | Type::OptionT(ty) | Type::VecT(ty) => quote! {
             <#ty as std::str::FromStr>::from_str(&__value).map_err(|e| XmlError::FromStr(e.into()))?
         },
+    }
+}
+
+fn map_from(ty: &Type, val: TokenStream) -> TokenStream {
+    match &ty {
+        Type::Map(_, _) | Type::OptionMap(_, _) => quote! {
+            #val
+        },
+        Type::CowStr | Type::OptionCowStr | Type::VecCowStr => quote! {
+            std::borrow::Cow::from(#val)
+        },
+        Type::Bool | Type::OptionBool | Type::VecBool => quote! {
+            match &*#val {
+                "t" | "true" | "y" | "yes" | "on" | "1" => true,
+                "f" | "false" | "n" | "no" | "off" | "0" => false,
+                _ => <bool as std::str::FromStr>::from_str(&#val).map_err(|e| XmlError::FromStr(e.into()))?
+            }
+        },
+        Type::T(ty) | Type::OptionT(ty) | Type::VecT(ty) => quote! {
+            <#ty as std::str::FromStr>::from_str(&__value).map_err(|e| XmlError::FromStr(e.into()))?
+        },
+        _ => panic!("`from` attribute only supports Map<K, V> and Option<Map<K, V>>."),
     }
 }

@@ -467,7 +467,7 @@ impl Type {
         matches!(self, Type::Map(_, _) | Type::OptionMap(_, _) | Type::VecTuple(_, _) | Type::OptionVecTuple(_, _))
     }
 
-    fn parse(mut ty: syn::Type) -> Self {
+    pub(crate) fn parse(mut ty: syn::Type) -> Self {
         fn is_vec(ty: &syn::Type) -> Option<&syn::Type> {
             let path = match ty {
                 syn::Type::Path(ty) => &ty.path,
