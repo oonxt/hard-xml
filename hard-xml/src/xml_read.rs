@@ -1,5 +1,5 @@
+use std::io::{Read, Seek};
 use crate::{XmlReader, XmlResult};
-use std::io::{BufReader, Read};
 
 pub trait XmlRead<'a>: Sized {
     fn from_reader(reader: &mut XmlReader<'a>) -> XmlResult<Self>;
@@ -8,14 +8,17 @@ pub trait XmlRead<'a>: Sized {
         let mut reader = XmlReader::new(text);
         Self::from_reader(&mut reader)
     }
+}
 
-    fn from_buffer<R: std::io::BufRead + 'a>(mut buf: R, buffer: &'a mut String) -> XmlResult<Self> {
-        buf.read_to_string(buffer)?;
-        let mut reader = XmlReader::new(buffer);
+pub trait XmlReadOwned: for<'s> XmlRead<'s> {
+    #[cfg(feature = "zip")]
+    fn from_archive_file<R: Read + Seek>(archive: &mut zip::ZipArchive<R>, path: &str) -> XmlResult<Self> {
+        let mut file = archive.by_name(path)?;
+        let mut buffer = String::new();
+        file.read_to_string(&mut buffer)?;
+        let mut reader = XmlReader::new(&buffer);
         Self::from_reader(&mut reader)
     }
 }
-
-pub trait XmlReadOwned: for<'s> XmlRead<'s> {}
 
 impl<T> XmlReadOwned for T where T: for<'s> XmlRead<'s> {}
