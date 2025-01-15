@@ -16,7 +16,6 @@ lazy_static = "1.4"
 log = { version = "0.4", optional = true }
 memchr = "2.4"
 xmlparser = "0.13"
-zip = { version = "2", optional = true }
 
 [dependencies.hard-xml-derive]
 version = "0.0.0"

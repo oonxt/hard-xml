@@ -14,8 +14,6 @@ pub enum XmlError {
     UnterminatedEntity { entity: String },
     UnrecognizedSymbol { symbol: String },
     FromStr(Box<dyn Error + Send + Sync>),
-    #[cfg(feature = "zip")]
-    ZipError(zip::result::ZipError),
 }
 
 impl From<IOError> for XmlError {
@@ -42,13 +40,6 @@ impl From<ParserError> for XmlError {
     }
 }
 
-#[cfg(feature = "zip")]
-impl From<zip::result::ZipError> for XmlError {
-    fn from(err: zip::result::ZipError) -> Self {
-        XmlError::ZipError(err)
-    }
-}
-
 /// Specialized `Result` which the error value is `Error`.
 pub type XmlResult<T> = Result<T, XmlError>;
 
@@ -60,8 +51,6 @@ impl Error for XmlError {
             Parser(e) => Some(e),
             Utf8(e) => Some(e),
             FromStr(e) => Some(e.as_ref()),
-            #[cfg(feature = "zip")]
-            ZipError(e) => Some(e), 
             _ => None,
         }
     }
@@ -90,8 +79,6 @@ impl std::fmt::Display for XmlError {
             UnterminatedEntity { entity } => write!(f, "unterminated XML entity: {}", entity),
             UnrecognizedSymbol { symbol } => write!(f, "unrecognized XML symbol: {}", symbol),
             FromStr(e) => write!(f, "error parsing XML value: {}", e),
-            #[cfg(feature = "zip")]
-            ZipError(e) => write!(f, "ZIP error: {}", e),
         }
     }
 }
