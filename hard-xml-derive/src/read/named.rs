@@ -328,7 +328,7 @@ fn read_prefix(
             let value_default = map_from(&Type::parse(arg2.clone()), quote! { __value });
             quote! {
                 if key.starts_with(#tag) {
-                    #bind.insert((
+                    #bind.push((
                         #key_other,
                         // key[#len..].to_string(),
                         #value_default,
