@@ -561,7 +561,7 @@ fn map_from(ty: &Type, val: TokenStream) -> TokenStream {
             }
         },
         Type::T(ty) | Type::OptionT(ty) | Type::VecT(ty) => quote! {
-            <#ty as std::str::FromStr>::from_str(&__value).map_err(|e| XmlError::FromStr(e.into()))?
+            <#ty as std::str::FromStr>::from_str(&#val).map_err(|e| XmlError::FromStr(e.into()))?
         },
         _ => panic!("`from` attribute only supports Map<K, V> and Option<Map<K, V>>."),
     }
