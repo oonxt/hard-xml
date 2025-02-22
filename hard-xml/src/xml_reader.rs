@@ -19,7 +19,11 @@ pub struct XmlReader<'a> {
 
 impl<'a> XmlReader<'a> {
     #[inline]
-    pub fn new<'b: 'a>(text: &'b str) -> XmlReader<'a> {
+    pub fn new(text: &str) -> XmlReader<'a> {
+        let text = unsafe{
+            let ptr: *const str = text;
+            &*ptr
+        };
         XmlReader {
             tokenizer: Tokenizer::from(text).peekable(),
         }
