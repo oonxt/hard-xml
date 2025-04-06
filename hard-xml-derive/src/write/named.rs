@@ -306,6 +306,9 @@ fn to_str(ty: &Type, with: &Option<ExprPath>, convert: bool) -> TokenStream {
     }
 
     match &ty {
+        Type::SmolStr | Type::OptionSmolStr | Type::VecSmolStr => {
+            quote! { __value }
+        }
         Type::CowStr | Type::OptionCowStr | Type::VecCowStr => {
             quote! { __value }
         }

@@ -531,7 +531,11 @@ fn from_str(ty: &Type, with: &Option<ExprPath>) -> TokenStream {
     }
 
     match &ty {
-        Type::CowStr | Type::OptionCowStr | Type::VecCowStr | Type::Map(_, _) | Type::OptionMap(_, _) | Type::VecTuple(_, _) | Type::OptionVecTuple(_, _) => quote! { __value },
+        Type::SmolStr | Type::OptionSmolStr | Type::VecSmolStr => quote! {
+            smol_str::SmolStr::from(__value)
+        },
+        Type::CowStr | Type::OptionCowStr | Type::VecCowStr | 
+        Type::Map(_, _) | Type::OptionMap(_, _) | Type::VecTuple(_, _) | Type::OptionVecTuple(_, _) => quote! { __value },
         Type::Bool | Type::OptionBool | Type::VecBool => quote! {
             match &*__value {
                 "t" | "true" | "y" | "yes" | "on" | "1" => true,
@@ -549,6 +553,9 @@ fn map_from(ty: &Type, val: TokenStream) -> TokenStream {
     match &ty {
         Type::Map(_, _) | Type::OptionMap(_, _) => quote! {
             #val
+        },
+        Type::SmolStr | Type::OptionSmolStr | Type::VecSmolStr => quote! {
+            smol_str::SmolStr::from(#val)
         },
         Type::CowStr | Type::OptionCowStr | Type::VecCowStr => quote! {
             std::borrow::Cow::from(#val)

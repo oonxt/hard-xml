@@ -156,6 +156,12 @@ pub enum Field {
 }
 
 pub enum Type {
+    // SmolStr
+    SmolStr,
+    // Option<SmolStr>
+    OptionSmolStr,
+    // Vec<SmolStr>
+    VecSmolStr,
     // Cow<'a, str>
     CowStr,
     // Option<Cow<'a, str>>
@@ -455,12 +461,12 @@ impl Type {
     pub fn is_option(&self) -> bool {
         matches!(
             self,
-            Type::OptionCowStr | Type::OptionT(_) | Type::OptionBool | Type::OptionMap(_,_) | Type::OptionVecTuple(_,_)
+            Type::OptionCowStr | Type::OptionSmolStr | Type::OptionT(_) | Type::OptionBool | Type::OptionMap(_,_) | Type::OptionVecTuple(_,_)
         )
     }
 
     pub fn is_vec(&self) -> bool {
-        matches!(self, Type::VecCowStr | Type::VecT(_) | Type::VecBool)
+        matches!(self, Type::VecCowStr | Type::VecSmolStr | Type::VecT(_) | Type::VecBool)
     }
 
     pub fn is_map(&self) -> bool {
@@ -585,6 +591,10 @@ impl Type {
             }
         }
 
+        fn is_smol_str(ty: &syn::Type) -> bool {
+            matches!(ty, syn::Type::Path(ty) if ty.path.is_ident("SmolStr"))
+        }
+
         fn is_bool(ty: &syn::Type) -> bool {
             matches!(ty, syn::Type::Path(ty) if ty.path.is_ident("bool"))
         }
@@ -594,6 +604,8 @@ impl Type {
         if let Some(ty) = is_vec(&ty) {
             if is_cow_str(ty) {
                 Type::VecCowStr
+            } else if is_smol_str(ty) {
+                Type::VecSmolStr
             } else if is_bool(ty) {
                 Type::VecBool
             } else {
@@ -602,6 +614,8 @@ impl Type {
         } else if let Some(ty) = is_option(&ty) {
             if is_cow_str(ty) {
                 Type::OptionCowStr
+            } else if is_smol_str(ty) { 
+                Type::OptionSmolStr
             } else if is_bool(ty) {
                 Type::OptionBool
             } else if let Some((ty1, ty2)) = is_map(ty) {
@@ -613,6 +627,8 @@ impl Type {
             }
         } else if is_cow_str(&ty) {
             Type::CowStr
+        } else if is_smol_str(&ty) {
+            Type::SmolStr
         } else if is_bool(&ty) {
             Type::Bool
         } else if let Some((ty1, ty2)) = is_map(&ty) {
